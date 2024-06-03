@@ -7,7 +7,7 @@
 #include "SPI.h"
 #include <RTClib.h>
 
-#define codeVersion "0.4c"
+#define codeVersion "0.4g"
 
 // OLED FeatherWing buttons
 #define BUTTON_A 15
@@ -51,6 +51,7 @@ int rs232Cursor = 0;     // Cursor for RS232 Settings Menu
 int settingsCursor = 0;  // Cursor for Settings Menu
 int fileCursor = 0;
 int oledTimeout = 30;
+int tempOledTimeout = 30;
 const int fileLimit = 255;
 String files[fileLimit];
 bool isDirectory[fileLimit];
@@ -281,28 +282,22 @@ void showSettingsMenu() {
 
   // Adjust cursor and text display for scrolling
   for (int i = 0; i < visibleRows && (settingsCursor + i) < totalRows; i++) {
-    if (settingsCursor + i == currentSelection) {
-      display.fillRect(0, cursorY, display.width() - 5, rowHeight, SSD1306_WHITE);
-      display.setTextColor(SSD1306_BLACK);
-    } else {
-      display.setTextColor(SSD1306_WHITE);
-    }
     display.setCursor(0, cursorY);
     switch (settingsCursor + i) {
       case 0:
-        display.println("RS232 Settings");
+        display.println(settingsCursor + i == currentSelection ? "> RS232 Settings" : "  RS232 Settings");
         break;
       case 1:
-        display.println("OLED Timeout");
+        display.println(settingsCursor + i == currentSelection ? "> OLED Timeout" : "  OLED Timeout");
         break;
       case 2:
-        display.println("Reconnect SD");
+        display.println(settingsCursor + i == currentSelection ? "> Reconnect SD" : "  Reconnect SD");
         break;
       case 3:
-        display.println("Date/Time");
+        display.println(settingsCursor + i == currentSelection ? "> Date/Time" : "  Date/Time");
         break;
       case 4:
-        display.println("WiFi");
+        display.println(settingsCursor + i == currentSelection ? "> WiFi" : "  WiFi");
         break;
     }
     cursorY += rowHeight;
@@ -320,35 +315,29 @@ void showSettingsMenu() {
 
 void showRS232SettingsMenu() {
   display.clearDisplay();
-  int visibleRows = 4;
-  int rowHeight = 8;  // Each row is 8 pixels high
-  int totalRows = 5;  // Total number of menu items
+  int visibleRows = 4;  // Number of rows that can be displayed at once
+  int rowHeight = 8;    // Each row is 8 pixels high
+  int totalRows = 5;    // Total number of menu items
   int displayHeight = visibleRows * rowHeight;
   int cursorY = 0;
 
   for (int i = 0; i < visibleRows && (rs232Cursor + i) < totalRows; i++) {
-    if (rs232Cursor + i == currentSelection) {
-      display.fillRect(0, cursorY, display.width() - 5, rowHeight, SSD1306_WHITE);
-      display.setTextColor(SSD1306_BLACK);
-    } else {
-      display.setTextColor(SSD1306_WHITE);
-    }
     display.setCursor(0, cursorY);
     switch (rs232Cursor + i) {
       case 0:
-        display.println("Baud Rate");
+        display.println(rs232Cursor + i == currentSelection ? "> Baud Rate" : "  Baud Rate");
         break;
       case 1:
-        display.println("Parity");
+        display.println(rs232Cursor + i == currentSelection ? "> Parity" : "  Parity");
         break;
       case 2:
-        display.println("Duplex");
+        display.println(rs232Cursor + i == currentSelection ? "> Duplex" : "  Duplex");
         break;
       case 3:
-        display.println("Flow Control");
+        display.println(rs232Cursor + i == currentSelection ? "> Flow Control" : "  Flow Control");
         break;
       case 4:
-        display.println("Bit Count");
+        display.println(rs232Cursor + i == currentSelection ? "> Bit Count" : "  Bit Count");
         break;
     }
     cursorY += rowHeight;
@@ -423,7 +412,7 @@ void showDateTimeMenu() {
   }
 
   display.display();
-  
+
   // Debug prints to check function call and variable values
   Serial.print("isSettingDateTime: ");
   Serial.println(isSettingDateTime);
@@ -445,8 +434,8 @@ void showDateTimeMenu() {
 
 void enterDateTimeMenu() {
   isSettingDateTime = false;  // or true, based on your control logic
-  dateTimeSelection = 0;  // Start with the year
-  newDateTime = rtc.now();  // Initialize with the current date and time
+  dateTimeSelection = 0;      // Start with the year
+  newDateTime = rtc.now();    // Initialize with the current date and time
   currentMenu = DATE_TIME_MENU;
   showDateTimeMenu();  // Call to show the initial DateTime menu
 }
@@ -485,7 +474,12 @@ void listFiles(String directory) {
 }
 
 void handleButtonA() {
-  if (currentMenu == SETTINGS_MENU) {
+  if (currentMenu == OLED_TIMEOUT_MENU) {
+    oledTimeout += 5;
+    if (oledTimeout > 120) {
+      oledTimeout = 10;
+    }
+  } else if (currentMenu == SETTINGS_MENU) {
     if (currentSelection < getCurrentMenuSize() - 1) {
       currentSelection++;
       if (currentSelection >= settingsCursor + 4) {
@@ -588,7 +582,9 @@ int getCurrentMenuSize() {
 }
 
 void handleButtonB() {
-  if (currentMenu == DATE_TIME_MENU && isSettingDateTime) {
+  if (currentMenu == OLED_TIMEOUT_MENU) {
+    currentMenu = SETTINGS_MENU;  // Save the new value and return to settings menu
+  } else if (currentMenu == DATE_TIME_MENU && isSettingDateTime) {
     dateTimeSelection = (dateTimeSelection + 1) % 5;
   } else {
     switch (currentMenu) {
@@ -612,6 +608,7 @@ void handleButtonB() {
             break;
           case 1:
             currentMenu = OLED_TIMEOUT_MENU;
+            tempOledTimeout = oledTimeout;
             break;
           case 2:
             currentMenu = RECONNECT_SD_MENU;
@@ -675,8 +672,10 @@ void handleButtonB() {
         currentMenu = RS232_SETTINGS_MENU;
         break;
       case OLED_TIMEOUT_MENU:
-        oledTimeout = (oledTimeout == 30) ? 60 : (oledTimeout == 60) ? 120
-                                                                     : 30;
+        oledTimeout += 5;
+        if (oledTimeout > 120) {
+          oledTimeout = 10;
+        }
         currentMenu = SETTINGS_MENU;
         break;
       case RECONNECT_SD_MENU:
@@ -735,6 +734,9 @@ void handleButtonCPress() {
         currentSelection = 0;
         break;
       case OLED_TIMEOUT_MENU:
+        currentMenu = SETTINGS_MENU;
+        oledTimeout = tempOledTimeout;
+        break;
       case RECONNECT_SD_MENU:
       case DATE_TIME_MENU:
         if (isSettingDateTime) {
