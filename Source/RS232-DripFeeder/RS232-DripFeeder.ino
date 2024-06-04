@@ -7,7 +7,7 @@
 #include "SPI.h"
 #include <RTClib.h>
 
-#define codeVersion "0.4L"
+#define codeVersion "0.5a"
 
 // OLED FeatherWing buttons
 #define BUTTON_A 15
@@ -37,6 +37,7 @@ enum MenuState {
   FILE_TRANSMIT_MENU,
   WIFI_MENU,
   ABOUT_MENU,
+  ABOUT_MENU_2,
   FILE_SELECT_ERROR
 };
 
@@ -62,6 +63,7 @@ unsigned long lastButtonPressTime = 0;
 unsigned long lastButtonCTime = 0;        // For debouncing button C
 const unsigned long debounceDelay = 200;  // 200 milliseconds debounce delay
 bool oledOn = true;
+bool wifiEnable = false;
 
 int baudRates[] = { 300, 600, 750, 1200, 2400, 4800, 9600, 19200, 31250, 38400, 57600, 74880, 115200, 230400, 250000, 460800, 500000, 921600, 1000000, 2000000 };
 int baudRateIndex = 6;  // Default 9600
@@ -231,6 +233,9 @@ void showMenu() {
       display.print("Version: ");
       display.println(codeVersion);
       break;
+    case ABOUT_MENU_2:
+      display.println("Source Code:");
+      display.println("https://github.com/ZGoode/RS-232-DripFeeder");
     case FILE_SELECT_ERROR:
       display.println("SD card failed, or not present");
       break;
@@ -430,9 +435,13 @@ void showWiFiMenu() {
   display.clearDisplay();
   display.setTextColor(SSD1306_WHITE);
   display.setCursor(0, 0);
-  display.println("WiFi Settings:");
-  display.println("SSID: Your_SSID");
-  display.println("Status: Connected");
+  display.println(currentSelection == 0 ? "> Status" : "  Status");
+  if (wifiEnable) {
+    display.println(currentSelection == 1 ? "> Enabled" : "  Enabled");
+  } else {
+    display.println(currentSelection == 1 ? "> Disabled" : "  Disabled");
+  }
+  display.println(currentSelection == 2 ? "> Reset" : "  Reset");
   display.display();
 }
 
@@ -687,6 +696,10 @@ void handleButtonB() {
   } else if (currentMenu == RS232_BIT_COUNT_MENU) {
     bitCountIndex = tempBitCountIndex;
     currentMenu = RS232_SETTINGS_MENU;
+  } else if (currentMenu == WIFI_MENU && currentSelection == 1) {
+    wifiEnable = !wifiEnable;
+    showMenu();
+    return;
   } else if (currentMenu == DATE_TIME_MENU && isSettingDateTime) {
 
   } else {
@@ -799,7 +812,10 @@ void handleButtonB() {
         currentMenu = FILE_SELECT_MENU;
         break;
       case ABOUT_MENU:
-        currentMenu = HOME_MENU;
+        currentMenu = ABOUT_MENU_2;
+        break;
+      case ABOUT_MENU_2:
+        currentMenu = ABOUT_MENU;
         break;
     }
   }
