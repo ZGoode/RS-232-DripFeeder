@@ -7,7 +7,7 @@
 #include "SPI.h"
 #include <RTClib.h>
 
-#define codeVersion "0.4g"
+#define codeVersion "0.4L"
 
 // OLED FeatherWing buttons
 #define BUTTON_A 15
@@ -64,11 +64,16 @@ const unsigned long debounceDelay = 200;  // 200 milliseconds debounce delay
 bool oledOn = true;
 
 int baudRates[] = { 300, 600, 750, 1200, 2400, 4800, 9600, 19200, 31250, 38400, 57600, 74880, 115200, 230400, 250000, 460800, 500000, 921600, 1000000, 2000000 };
-int baudRateIndex = 6;     // Default 9600
-int parityIndex = 0;       // 0 - None, 1 - Even, 2 - Odd
-int duplexIndex = 1;       // 0 - Half, 1 - Full
+int baudRateIndex = 6;  // Default 9600
+int tempBaudRateIndex = 6;
+int parityIndex = 0;  // 0 - None, 1 - Even, 2 - Odd
+int tempParityIndex = 0;
+int duplexIndex = 1;  // 0 - Half, 1 - Full
+int tempDuplexIndex = 1;
 int flowControlIndex = 3;  // 0 - None, 1 - XON/XOFF, 2 - ENQ/ACK, 3 - Hardware
-int bitCountIndex = 1;     // 0 - 7-bit, 1 - 8-bit
+int tempFlowControlIndex = 3;
+int bitCountIndex = 1;  // 0 - 7-bit, 1 - 8-bit
+int tempBitCountIndex = 1;
 
 void IRAM_ATTR handleButtonC() {
   unsigned long currentTime = millis();
@@ -177,28 +182,19 @@ void showMenu() {
       showRS232SettingsMenu();
       break;
     case RS232_BAUD_RATE_MENU:
-      for (int i = 0; i < sizeof(baudRates) / sizeof(baudRates[0]); i++) {
-        display.println(currentSelection == i ? "> " + String(baudRates[i]) : "  " + String(baudRates[i]));
-      }
+      showBaudRateMenu();
       break;
     case RS232_PARITY_MENU:
-      display.println(currentSelection == 0 ? "> None" : "  None");
-      display.println(currentSelection == 1 ? "> Even" : "  Even");
-      display.println(currentSelection == 2 ? "> Odd" : "  Odd");
+      showParityMenu();
       break;
     case RS232_DUPLEX_MENU:
-      display.println(currentSelection == 0 ? "> Half" : "  Half");
-      display.println(currentSelection == 1 ? "> Full" : "  Full");
+      showDuplexMenu();
       break;
     case RS232_FLOW_CONTROL_MENU:
-      display.println(currentSelection == 0 ? "> None" : "  None");
-      display.println(currentSelection == 1 ? "> XON/XOFF" : "  XON/XOFF");
-      display.println(currentSelection == 2 ? "> ENQ/ACK" : "  ENQ/ACK");
-      display.println(currentSelection == 3 ? "> Hardware" : "  Hardware");
+      showFlowControlMenu();
       break;
     case RS232_BIT_COUNT_MENU:
-      display.println(currentSelection == 0 ? "> 7-bit" : "  7-bit");
-      display.println(currentSelection == 1 ? "> 8-bit" : "  8-bit");
+      showBitCountMenu();
       break;
     case OLED_TIMEOUT_MENU:
       display.print("Set OLED Timeout:\nCurrent: ");
@@ -240,6 +236,83 @@ void showMenu() {
       break;
   }
 
+  display.display();
+}
+
+void showBaudRateMenu() {
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.print("Baud Rate:\n");
+  display.print(baudRates[tempBaudRateIndex]);
+  display.display();
+}
+
+void showParityMenu() {
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.print("Parity:\n");
+  switch (tempParityIndex) {
+    case 0:
+      display.print("None");
+      break;
+    case 1:
+      display.print("Even");
+      break;
+    case 2:
+      display.print("Odd");
+      break;
+  }
+  display.display();
+}
+
+void showDuplexMenu() {
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.print("Duplex:\n");
+  switch (tempDuplexIndex) {
+    case 0:
+      display.print("Full");
+      break;
+    case 1:
+      display.print("Half");
+      break;
+  }
+  display.display();
+}
+
+void showFlowControlMenu() {
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.print("Flow Control:\n");
+  switch (tempFlowControlIndex) {
+    case 0:
+      display.print("None");
+      break;
+    case 1:
+      display.print("XON/XOFF");
+      break;
+    case 2:
+      display.print("ENQ/ACK");
+      break;
+    case 3:
+      display.print("Hardware");
+      break;
+  }
+  display.display();
+}
+
+void showBitCountMenu() {
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.print("Bit Count:\n");
+  switch (tempBitCountIndex) {
+    case 0:
+      display.print("7-Bit");
+      break;
+    case 1:
+      display.print("8-Bit");
+      break;
+  }
   display.display();
 }
 
@@ -479,6 +552,21 @@ void handleButtonA() {
     if (oledTimeout > 120) {
       oledTimeout = 10;
     }
+  } else if (currentMenu == RS232_BAUD_RATE_MENU) {
+    tempBaudRateIndex = (tempBaudRateIndex + 1) % (sizeof(baudRates) / sizeof(baudRates[0]));
+    showBaudRateMenu();
+  } else if (currentMenu == RS232_PARITY_MENU) {
+    tempParityIndex = (tempParityIndex + 1) % 3;  // There are 3 parity options: None, Even, Odd
+    showParityMenu();
+  } else if (currentMenu == RS232_DUPLEX_MENU) {
+    tempDuplexIndex = (tempDuplexIndex + 1) % 2;  // There are 2 duplex options: Half, Full
+    showDuplexMenu();
+  } else if (currentMenu == RS232_FLOW_CONTROL_MENU) {
+    tempFlowControlIndex = (tempFlowControlIndex + 1) % 4;  // There are 4 flow control options: None, XON/XOFF, ENQ/ACK, Hardware
+    showFlowControlMenu();
+  } else if (currentMenu == RS232_BIT_COUNT_MENU) {
+    tempBitCountIndex = (tempBitCountIndex + 1) % 2;  // There are 2 bit count options: 7-bit, 8-bit
+    showBitCountMenu();
   } else if (currentMenu == SETTINGS_MENU) {
     if (currentSelection < getCurrentMenuSize() - 1) {
       currentSelection++;
@@ -584,8 +672,23 @@ int getCurrentMenuSize() {
 void handleButtonB() {
   if (currentMenu == OLED_TIMEOUT_MENU) {
     currentMenu = SETTINGS_MENU;  // Save the new value and return to settings menu
+  } else if (currentMenu == RS232_BAUD_RATE_MENU) {
+    baudRateIndex = tempBaudRateIndex;
+    currentMenu = RS232_SETTINGS_MENU;
+  } else if (currentMenu == RS232_PARITY_MENU) {
+    parityIndex = tempParityIndex;
+    currentMenu = RS232_SETTINGS_MENU;
+  } else if (currentMenu == RS232_DUPLEX_MENU) {
+    duplexIndex = tempDuplexIndex;
+    currentMenu = RS232_SETTINGS_MENU;
+  } else if (currentMenu == RS232_FLOW_CONTROL_MENU) {
+    flowControlIndex = tempFlowControlIndex;
+    currentMenu = RS232_SETTINGS_MENU;
+  } else if (currentMenu == RS232_BIT_COUNT_MENU) {
+    bitCountIndex = tempBitCountIndex;
+    currentMenu = RS232_SETTINGS_MENU;
   } else if (currentMenu == DATE_TIME_MENU && isSettingDateTime) {
-    dateTimeSelection = (dateTimeSelection + 1) % 5;
+
   } else {
     switch (currentMenu) {
       case HOME_MENU:
@@ -726,12 +829,24 @@ void handleButtonCPress() {
         rs232Cursor = 0;
         break;
       case RS232_BAUD_RATE_MENU:
-      case RS232_PARITY_MENU:
-      case RS232_DUPLEX_MENU:
-      case RS232_FLOW_CONTROL_MENU:
-      case RS232_BIT_COUNT_MENU:
+        tempBaudRateIndex = baudRateIndex;
         currentMenu = RS232_SETTINGS_MENU;
-        currentSelection = 0;
+        break;
+      case RS232_PARITY_MENU:
+        tempParityIndex = parityIndex;
+        currentMenu = RS232_SETTINGS_MENU;
+        break;
+      case RS232_DUPLEX_MENU:
+        tempDuplexIndex = duplexIndex;
+        currentMenu = RS232_SETTINGS_MENU;
+        break;
+      case RS232_FLOW_CONTROL_MENU:
+        tempFlowControlIndex = flowControlIndex;
+        currentMenu = RS232_SETTINGS_MENU;
+        break;
+      case RS232_BIT_COUNT_MENU:
+        tempBitCountIndex = bitCountIndex;
+        currentMenu = RS232_SETTINGS_MENU;
         break;
       case OLED_TIMEOUT_MENU:
         currentMenu = SETTINGS_MENU;
