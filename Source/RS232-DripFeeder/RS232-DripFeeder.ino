@@ -6,6 +6,9 @@
 #include "SD.h"
 #include "SPI.h"
 #include <RTClib.h>
+#include <WiFiManager.h>
+#include <time.h>
+#include <stdio.h>
 
 #define codeVersion "0.5a"
 
@@ -442,7 +445,8 @@ void showWiFiMenu() {
   } else {
     display.println(currentSelection == 1 ? "> Disabled" : "  Disabled");
   }
-  display.println(currentSelection == 2 ? "> Reset" : "  Reset");
+  display.println(currentSelection == 2 ? "> Configure" : "  Configure");
+  display.println(currentSelection == 3 ? "> Reset" : "  Reset");
   display.display();
 }
 
@@ -667,7 +671,7 @@ int getCurrentMenuSize() {
     case DATE_TIME_MENU:
       return 1;  // Placeholder for Date/Time menu size
     case WIFI_MENU:
-      return 3;  // Placeholder for WiFi menu size
+      return 4;  // Placeholder for WiFi menu size
     case FILE_TRANSMIT_MENU:
       return 1;  // Only one option for transmitting file
     case ABOUT_MENU:
