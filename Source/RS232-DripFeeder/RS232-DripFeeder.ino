@@ -24,6 +24,10 @@ int dateTimeSelection = 0;  // To track the current field being edited
 DateTime newDateTime;
 bool isSettingDateTime = false;
 
+bool wm_nonblocking = false;        // change to true to use non blocking
+WiFiManager wm;                     // global wm instance
+WiFiManagerParameter custom_field;  // global param ( for non blocking w params )
+
 enum MenuState {
   HOME_MENU,
   FILE_SELECT_MENU,
@@ -41,7 +45,8 @@ enum MenuState {
   WIFI_MENU,
   ABOUT_MENU,
   ABOUT_MENU_2,
-  FILE_SELECT_ERROR
+  FILE_SELECT_ERROR,
+  WIFI_STATUS_MENU,
 };
 
 MenuState currentMenu = HOME_MENU;
@@ -89,6 +94,8 @@ void IRAM_ATTR handleButtonC() {
 }
 
 void setup() {
+  WiFi.mode(WIFI_STA);  // explicitly set mode, esp defaults to STA+AP
+
   Serial.begin(115200);
 
   if (!rtc.begin()) {
@@ -722,6 +729,19 @@ void handleButtonB() {
             break;
         }
         break;
+      case WIFI_MENU:
+        switch (currentSelection) {
+          case 0:
+            currentMenu = WIFI_STATUS_MENU;
+            break;
+          case 2:
+            //figure out wifi config mode
+            break;
+          case 3:
+            wm.resetSettings();
+            break;
+        }
+        break;
       case SETTINGS_MENU:
         switch (currentSelection) {
           case 0:
@@ -808,10 +828,6 @@ void handleButtonB() {
         if (!isSettingDateTime) {
           rtc.adjust(newDateTime);
         }
-        break;
-      case WIFI_MENU:
-        // Placeholder for WiFi menu actions
-        currentMenu = SETTINGS_MENU;
         break;
       case FILE_TRANSMIT_MENU:
         currentMenu = FILE_SELECT_MENU;
